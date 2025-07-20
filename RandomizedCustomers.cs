@@ -28,46 +28,9 @@ public class RandomizedCustomers : BaseUnityPlugin
             CharacterCustomization cc = __instance.m_CharacterCustom;
             LODGroup[] enableGroups = cc.GetComponentsInChildren<LODGroup>(true);
 
-            if (!__instance.name.Contains("hq_") && hqCustomers.Value)
-            {
-                Mesh replaceBodyMesh;
-                if (__instance.m_IsFemale)
-                {
-                    replaceBodyMesh = Instance.hqFemale;
-                }
-                else
-                {
-                    replaceBodyMesh = Instance.hqMale;
-                }
-                if (replaceBodyMesh != null)
-                {
-                    LOD[] lods = cc.GetComponent<LODGroup>().GetLODs();
-                    // Pick up mesh above slot
-                    for (int i = lods.Length - 1; i > 0; i--)
-                    {
-                        ((SkinnedMeshRenderer)lods[i].renderers[0]).sharedMesh = ((SkinnedMeshRenderer)lods[i - 1].renderers[0]).sharedMesh;
-                        ((SkinnedMeshRenderer)lods[i].renderers[0]).materials = ((SkinnedMeshRenderer)lods[i - 1].renderers[0]).materials;
-                        ((SkinnedMeshRenderer)lods[i].renderers[0]).material = ((SkinnedMeshRenderer)lods[i - 1].renderers[0]).material;
-                    }
-                    ((SkinnedMeshRenderer)lods[0].renderers[0]).sharedMesh = replaceBodyMesh;
-
-                    // Swaps materials to order required for LOD0
-                    Material[] shuffleMats = new Material[6];
-                    SkinnedMeshRenderer rend = (SkinnedMeshRenderer)lods[0].renderers[0];
-                    shuffleMats[0] = rend.materials[2];
-                    shuffleMats[1] = rend.materials[5];
-                    shuffleMats[2] = rend.materials[4];
-                    shuffleMats[3] = rend.materials[0];
-                    shuffleMats[4] = rend.materials[1];
-                    shuffleMats[5] = rend.materials[3];
-                    rend.materials = shuffleMats;
-                    __instance.name = "hq_" + __instance.name;
-                }
-            }
-
             int hairSlotCount = cc.HairTables.Count;
 
-            if (randomizedCustomers.Value || hqHair.Value)
+            if (randomizedCustomers.Value)
             {
                 // setHair
                 for (int i = 0; i < hairSlotCount; i++)
@@ -97,62 +60,8 @@ public class RandomizedCustomers : BaseUnityPlugin
                         Logger.LogInfo($"Setting Hair: {i}, {styleSelection}, {cc.gameObject.name}, {hairKey}");
                         cc.setHair(styleSelection, i);
                     }
-
-                    if (hqHair.Value)
-                    {
-                        // Replace hair mesh
-                        GameObject hairObject = cc.GetHairObjects()[i];
-                        if (hairObject != null)
-                        {
-                            LODGroup lodGroup = hairObject.GetComponentInChildren<LODGroup>();
-
-                            string meshName = ((SkinnedMeshRenderer)lodGroup.GetLODs()[0].renderers[0]).sharedMesh.name;
-                            string translatedKey = "";
-
-                            if (hairKey == "" && !meshName.Contains("LOD0") && meshName.Contains("LOD"))
-                            {
-                                hairKey = meshName.Remove(meshName.Length - 1, 1) + "0";
-                                translatedKey = hairKey;
-                            }
-                            if (!meshName.Contains("LOD0") && (hqHairTranslate.ContainsKey(hairKey) || Instance.hqHairDict.ContainsKey(hairKey)))
-                            {
-                                string[] meshSplit = meshName.Split("_");
-                                if (hqHairTranslate.ContainsKey(hairKey) && translatedKey == "")
-                                {
-                                    if (hqHairTranslate[hairKey].Count() > 1)
-                                    {
-                                        if (__instance.m_IsFemale)
-                                        {
-                                            translatedKey = hqHairTranslate[hairKey][1];
-                                        }
-                                        else
-                                        {
-                                            translatedKey = hqHairTranslate[hairKey][0];
-                                        }
-                                    }
-                                    else
-                                    {
-                                        translatedKey = hqHairTranslate[hairKey][0];
-                                    }
-                                }
-
-                                Logger.LogInfo($"Replacing hair {meshName} with {translatedKey}");
-                                if (Instance.hqHairDict.ContainsKey(translatedKey))
-                                {
-
-                                    ((SkinnedMeshRenderer)lodGroup.GetLODs()[0].renderers[0]).sharedMesh = Instance.hqHairDict[translatedKey];
-
-                                }
-                            }
-                        }
-                    }
                 }
-            }
 
-
-
-            if (randomizedCustomers.Value)
-            {
                 int colorIndex = UnityEngine.Random.RandomRangeInt(0, hairColors.Length);
 
                 for (int i = 0; i < hairSlotCount; i++)
@@ -178,52 +87,47 @@ public class RandomizedCustomers : BaseUnityPlugin
 
                     List<GameObject> apparelObjects = cc.GetApparelObjects();
                 }
-            }
 
-            if (hqClothing.Value)
-            {
-                // Attempt to upgrade apparel LODs
-                foreach (GameObject apparel in cc.GetApparelObjects())
-                {
-                    Logger.LogInfo($"Setting LOD of {apparel.name}");
-                    LODGroup group = apparel.GetComponent<LODGroup>();
-                    if (group == null) continue;
-                    if (group.GetLODs()[0].renderers[0].name.Contains("LOD0"))
-                    {
-                        group.GetLODs()[0].renderers[0].gameObject.SetActive(true);
-                        group.GetLODs()[0].renderers[0].enabled = true;
-                        continue;
-                    }
-                    // Find LOD0
-                    SkinnedMeshRenderer zeroRenderer = null;
-                    foreach (SkinnedMeshRenderer renderer in apparel.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                    {
-                        if (renderer.name.Contains("LOD0"))
-                        {
-                            zeroRenderer = renderer;
-                            break;
-                        }
-                    }
-
-                    if (zeroRenderer == null) break;
-                    LOD[] lods = group.GetLODs();
-                    if (zeroRenderer.bones.Count() != ((SkinnedMeshRenderer)lods[0].renderers[0]).bones.Count()) break;
-
-                    // Pick up mesh above slot
-                    for (int i = lods.Length - 1; i > 0; i--)
-                    {
-                        ((SkinnedMeshRenderer)lods[i].renderers[0]).sharedMesh = ((SkinnedMeshRenderer)lods[i - 1].renderers[0]).sharedMesh;
-                    }
-
-                    ((SkinnedMeshRenderer)lods[0].renderers[0]).sharedMesh = zeroRenderer.sharedMesh;
-                }
-            }
-
-            if (randomizedCustomers.Value)
-            {
                 randomizer.randomizeAll(cc);
             }
         }
+    }
+
+    [HarmonyPatch(typeof(CustomerManager), "Start")]
+    private class CustomerBodyPrefabSwap
+    {
+        [HarmonyPrefix]
+        [HarmonyBefore("devopsdinosaur.tcgshop.custom_customers")]
+        private static void SwapCustomerBodyPrefab(CustomerManager __instance)
+        {
+            if (!modEnabled.Value) return;
+            if (hqClothing.Value || hqCustomers.Value || hqHair.Value)
+            {
+                Instance.UpdateCustomerAssets(__instance);
+                List<GameObject> newCustomers = new();
+                List<GameObject> oldCustomers = new();
+                // Replace existing customers
+                for (int i = 0; i < __instance.m_CustomerParentGrp.childCount; i++)
+                {
+                    GameObject oldCust = __instance.m_CustomerParentGrp.GetChild(i).gameObject;
+                    oldCustomers.Add(oldCust);
+
+                    Customer newCust = UnityEngine.Object.Instantiate<Customer>(oldCust.GetComponent<Customer>().m_IsFemale ? __instance.m_CustomerFemalePrefab : __instance.m_CustomerPrefab);
+                    newCust.gameObject.name = oldCust.gameObject.name;
+                    newCustomers.Add(newCust.gameObject);
+                }
+
+                foreach (GameObject oldCustGO in oldCustomers)
+                {
+                    DestroyImmediate(oldCustGO);
+                }
+
+                foreach (GameObject newCust in newCustomers)
+                {
+                    newCust.transform.parent = __instance.m_CustomerParentGrp;
+                }
+            }
+        } 
     }
 
     internal static new ManualLogSource Logger;
@@ -237,12 +141,8 @@ public class RandomizedCustomers : BaseUnityPlugin
     private static ConfigEntry<bool> hqCustomers;
     private static ConfigEntry<bool> randomizedCustomers;
 
-    private Mesh hqFemale;
-    private Mesh hqMale;
-
     private static CCRandomizer randomizer;
 
-    public Dictionary<string, Mesh> hqHairDict = new();
 
 
     internal static RandomizedCustomers Instance;
@@ -254,13 +154,16 @@ public class RandomizedCustomers : BaseUnityPlugin
         Logger = base.Logger;
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
 
-        modEnabled = Config.Bind<bool>("", "Enable Mod", true, "Enable or Disable. Reload to return to default customers.");
+        modEnabled = Config.Bind<bool>("", "Enable Mod", true, "Enable or Disable. Reload after disabling to return to default customers and assets.");
 
         hqCustomers = Config.Bind<bool>("Customer Options", "Enable High Quality Customers", true, "Swaps customer models to higher quality models. Game reload required to disable.");
-        hqHair = Config.Bind<bool>("Customer Options", "Enable High Quality Hair", true, "Swaps many hairstyles to a higher quality model. Many are not working at the moment and remain lower quality.");
+        hqCustomers.SettingChanged += UpdateCustomerAssets;
+        hqHair = Config.Bind<bool>("Customer Options", "Enable High Quality Hair", true, "Swaps hairstyles to a higher quality model. Game reload required to disable.");
+        hqHair.SettingChanged += UpdateCustomerAssets;
         randomizedCustomers = Config.Bind<bool>("Customer Options", "Randomize Customers", true, "Randomizes every customer that comes to the store. Randomizes face and body appearance, hair, and clothes. Reload to return to default customers.");
 
-        hqClothing = Config.Bind<bool>("Clothing Options", "Enable High Quality Clothing", true, "Swaps most clothing to higher quality models.");
+        hqClothing = Config.Bind<bool>("Clothing Options", "Enable High Quality Clothing", true, "Swaps clothing to higher quality models. Game reload required to disable.");
+        hqClothing.SettingChanged += UpdateCustomerAssets;
         normalClothingMode = Config.Bind<bool>("Clothing Options", "Normal Clothes Only", true, "Makes sure that customers only wear relatively normal clothes. \n IF YOU TURN THIS OFF, CUSTOMERS WILL SPAWN IN THEIR UNDERWEAR. Disable at your own risk. \n This mod adds no additional clothing, only selects from what is already available in the game's files.");
 
         harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
@@ -269,27 +172,142 @@ public class RandomizedCustomers : BaseUnityPlugin
         randomizer = new CCRandomizer(Logger);
     }
 
-    private void Start()
+    private void UpdateCustomerAssets(object sender, EventArgs e)
     {
-        CEventManager.AddListener<CEventPlayer_GameDataFinishLoaded>(OnGameDataFinishLoaded);
-
+        UpdateCustomerAssets(GameObject.Find("CustomerManager").GetComponent<CustomerManager>());
     }
 
-    private void OnGameDataFinishLoaded(CEventPlayer_GameDataFinishLoaded evt)
+    private void UpdateCustomerAssets(CustomerManager manager)
     {
-        hqFemale = Resources.FindObjectsOfTypeAll<Mesh>().Where(x => x.name == "Female_Combined_LOD0").ToArray()[0];
-        hqMale = Resources.FindObjectsOfTypeAll<Mesh>().Where(x => x.name == "Male_Combined_LOD0").ToArray()[0];
+        if (hqCustomers.Value)
+            UpdateBodyPrefabs(manager);
+        if (hqClothing.Value || hqHair.Value)
+            UpdateHairApparelPrefabObjects();
+    }
 
-        // Hair Archive
-        foreach (Mesh hairMesh in Resources.FindObjectsOfTypeAll<Mesh>().Where(x => hqHairNames.Contains(x.name)))
+    private void UpdateBodyPrefabs(CustomerManager manager)
+    {
+        List<GameObject> bodyPrefabs =
+        [
+            manager.m_CustomerPrefab.m_CharacterCustom.gameObject,
+            manager.m_CustomerFemalePrefab.m_CharacterCustom.gameObject,
+        ];
+
+        foreach (GameObject bodyObject in bodyPrefabs)
         {
-            hqHairDict[hairMesh.name] = hairMesh;
+            LODGroup group = bodyObject.GetComponentInChildren<CharacterCustomization>().GetComponent<LODGroup>();
+            if (group == null) continue;
+            ReconstructLODGroup(group);
+            bodyObject.GetComponentInChildren<CharacterCustomization>().m_HasInit = false;
+        }
+    }
+
+    private void UpdateHairApparelPrefabObjects()
+    {
+        CustomerManager manager = GameObject.Find("CustomerManager").GetComponent<CustomerManager>();
+        if (manager == null) return;
+
+        
+        List<GameObject> hairPrefabs = new();
+        List<GameObject> apparelPrefabs = new();
+
+        Logger.LogInfo($"Swapping from Customer List: {manager.GetComponentsInChildren<Customer>(true).Count()}");
+
+        foreach (Customer customer in manager.GetComponentsInChildren<Customer>(true))
+        {
+            foreach (scrObj_Hair hair in customer.m_CharacterCustom.HairTables)
+            {
+                foreach (GameObject hairPrefab in hair.Hairstyles.Select(x => x.Mesh))
+                {
+                    if (!hairPrefabs.Contains(hairPrefab) && hairPrefab != null)
+                    {
+                        hairPrefabs.Add(hairPrefab);
+                    }
+                }
+            }
+
+            foreach (scrObj_Apparel apparel in customer.m_CharacterCustom.ApparelTables)
+            {
+                foreach (GameObject apparelPrefab in apparel.Items.Select(x => x.Mesh))
+                {
+                    if (!apparelPrefabs.Contains(apparelPrefab) && apparelPrefab != null)
+                    {
+                        apparelPrefabs.Add(apparelPrefab);
+                    }
+                }
+            }
         }
 
-        Logger.LogInfo($"Hair dict built: {string.Join(", ", hqHairDict.Keys)}");
+        Logger.LogInfo($"Got Hair and Apparel: {hairPrefabs.Count}, {apparelPrefabs.Count}");
 
-        Logger.LogWarning($"Quality Settings Test: {QualitySettings.antiAliasing}, {QualitySettings.maximumLODLevel}");
-        // QualitySettings.antiAliasing = 8;
+        if (hqHair.Value)
+        {
+            foreach (GameObject hair in hairPrefabs)
+            {
+                if (hair == null) continue;
+                LODGroup group = hair.GetComponentInChildren<LODGroup>(true);
+                if (group == null) continue;
+
+                ReconstructLODGroup(group);
+            }
+        }
+
+        if (hqClothing.Value)
+        {
+            foreach (GameObject apparel in apparelPrefabs)
+            {
+                if (apparel == null) continue;
+                LODGroup group = apparel.GetComponentInChildren<LODGroup>(true);
+                if (group == null) continue;
+
+                ReconstructLODGroup(group);
+            }
+        }
+    }
+
+    private void ReconstructLODGroup(LODGroup group)
+    {
+        // Are all LODs active?
+        bool inactiveLODs = group.GetComponentsInChildren<SkinnedMeshRenderer>().Count() != group.GetComponentsInChildren<SkinnedMeshRenderer>(true).Count();
+        if (inactiveLODs)
+        {
+            Array.ForEach(group.GetComponentsInChildren<SkinnedMeshRenderer>(true), x =>
+            {
+                x.gameObject.SetActive(true);
+                x.enabled = true;
+            });
+        }
+
+        // Does the first listed LOD in the group refer to an "LOD0"?
+        bool firstIsLOD0 = group.GetLODs()[0].renderers.Where(x => x.name.Contains("LOD0")).Count() > 0;
+        if (firstIsLOD0)
+        {
+            return;
+        }
+
+        // Does an LOD0 renderer exist?
+        bool zeroExists = group.GetComponentsInChildren<SkinnedMeshRenderer>(true).Where(x => x.gameObject.name.Contains("LOD0")).Count() > 0;
+
+        // Does the number of LODs match the number of Renderers?
+        //bool countMatch = group.GetLODs().Count() == group.GetComponentsInChildren<SkinnedMeshRenderer>(true).Count();
+
+        if (zeroExists)
+        {
+            Logger.LogInfo($"Swapping LODs for Prefab: {group.gameObject.name}");
+            List<SkinnedMeshRenderer> skinnedMeshRenderers = group.GetComponentsInChildren<SkinnedMeshRenderer>(true).Where(x => x.gameObject.name.Contains("LOD")).OrderBy(x => x.name).ToList();
+            Logger.LogInfo($"Renderers: {string.Join(", ", skinnedMeshRenderers.Select(x => x.name))}");
+            LOD[] newLODs = new LOD[skinnedMeshRenderers.Count()];
+            for (int i = 0; i < skinnedMeshRenderers.Count(); i++)
+            {
+                float height = 0f;
+                if (i < (skinnedMeshRenderers.Count() - 1))
+                {
+                    height = 1f / (i + 2f);
+                }
+                newLODs[i] = new LOD(height, [skinnedMeshRenderers[i]]);
+            }
+            group.SetLODs(newLODs);
+        }
     }
 
     private static string[] hairColors
@@ -341,34 +359,4 @@ public class RandomizedCustomers : BaseUnityPlugin
                 ];
         }
     }
-
-    private static Dictionary<string, string[]> hqHairTranslate => new Dictionary<string, string[]>()
-            {
-                {"Bob_01", ["Hair_Bob_LOD0"]},
-                {"Side_Part_02", ["Side_Part_02_LOD0"]},
-                {"Long_01", ["Long_01_Male_LOD0", "Hair_Long_01_F_LOD0"]},
-                {"Afro_Curl_01", ["Hair_Afro_Curl_01_Male_LOD0", "Hair_Afro_Curl_01_Female_LOD0"]},
-                {"Long_Fringe_02", ["Long_Fringe_02_LOD0"]},
-                {"Ponytail_01", ["Ponytail_01_LOD0"]},
-                {"Ponytail_02", ["Ponytail_02_LOD0"]},
-                {"Short_Middle_Part_01", ["Short_Middle_Part_01_Male_LOD0", "Short_Middle_Part_01_Female_LOD0"]},
-                {"Wavey_01", ["Wavey_01_LOD0"]},
-                {"Receded_01", ["Receded_01_LOD0"]}
-            };
-
-    private static string[] hqHairNames => [
-        "Hair_Bob_LOD0",
-        "Side_Part_02_LOD0",
-        "Long_01_Male_LOD0",
-        "Hair_Long_01_F_LOD0",
-        "Long_Fringe_02_LOD0",
-        "Wavey_01_LOD0",
-        "Ponytail_01_LOD0",
-        "Ponytail_02_LOD0",
-        //"Hair_Afro_Curl_01_Male_LOD0", // These hairstyles don't work with a simple replacement
-        "Hair_Afro_Curl_01_Female_LOD0",
-        //"Short_Middle_Part_01_Female_LOD0", // These hairstyles don't work with a simple replacement
-        "Short_Middle_Part_01_Male_LOD0",
-        "Receded_01_LOD0",
-    ];
 }
